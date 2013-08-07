@@ -1,0 +1,8 @@
+name = "Summernote"
+description = "Super Simple WYSIWYG Editor on Bootstrap"
+core = "7.x"
+package = "Content authoring"
+configure = "admin/config/content/summernote"
+
+version = "7.x-dev"
+core = "7.x"

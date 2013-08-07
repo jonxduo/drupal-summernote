@@ -1,0 +1,143 @@
+<?php
+/**
+ * Implements hook_help.
+ *
+ * Displays help and module information.
+ *
+ * @param path
+ *   Restituisce la path corrente
+ * @param arg
+ *   Array che contiene il percorso corrente per arg() function
+ */
+function summernote_help($path, $arg ) {
+  switch ($path) {
+    case "admin/help#summernote" :
+      return '<p>'.t("Super Simple WYSIWYG Editor on Bootstrap").'</p>' ;
+    case "admin/config/content/summernote" :
+      return '<p>'.t("Summernote configuration").'</p>' ;
+      break;
+    }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function summernote_menu(){
+    $items = array();
+
+    $items['admin/config/content/summernote'] = array(
+        'title' => 'Summernote',
+        'description' => t('Summernote configuration'),
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('summernote_config_form'),
+        'access arguments' => array('administer summernote'),
+        'type' => MENU_NORMAL_ITEM,
+    );
+
+    return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function summernote_permission() {
+  return array(
+    'administer summernote' => array(
+      'title' => t('Administer Summernote'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_form().
+ */
+function summernote_config_form() {
+  // ottengo l'elenco dei field di testo
+  $fields=field_info_fields();
+  $options=array();
+  foreach($fields as $k=>$v){
+    if($v['module']=='text') $options[$v['field_name']]=$v['field_name'];
+  }
+
+  $form['sm_field_name'] = array(
+    '#type' => 'checkboxes',
+    '#options'=>$options,
+    '#title' => t('Text Field'),
+    '#default_value' => variable_get('sm_field_name'),
+    '#description' => t('List of fields name that use the editor'),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Implements hook_theme().
+ */
+function summernote_theme() {
+  $theme['summernote_editor'] = array('function' => 'summernote_editor_theme', 'render element' => 'form');
+  return $theme;
+}
+
+/**
+ * Implements hook_element_info().
+ */
+function summernote_element_info() {
+  $elements['textarea']['#process'] = array('summernote_textarea');
+  return $elements;
+}
+
+/**
+ * Integrate the editor into a textarea element.
+ */
+function summernote_textarea($element, $form_state) {
+  $avvailable_fields=variable_get('sm_field_name');
+  foreach($avvailable_fields as $k=>$v){
+    if(isset($element['#field_name']) && $element['#field_name']===$v) $element['#theme']='summernote_editor';
+  }
+  return $element;
+}
+
+/**
+ *
+ */
+function summernote_editor_theme ($variables){
+  //debug($variables);
+  $element = $variables['form'];
+  element_set_attributes($element, array('id', 'name', 'cols', 'rows'));
+  _form_set_class($element, array('form-textarea'));
+
+  $wrapper_attributes = array(
+    'class' => array('form-textarea-wrapper'),
+  );
+
+  // Add resizable behavior.
+  if (!empty($element['#resizable'])) {
+    drupal_add_library('system', 'drupal.textarea');
+    $wrapper_attributes['class'][] = 'resizable';
+  }
+
+  // preparazione output HTML
+  $wrapper_attributes['class'][]='summernoteEditor';
+  $output = '<div'.drupal_attributes($wrapper_attributes).'>';
+  $output .= /*'<button class="btn btn-primary edit" type="button">Edit</button><button class="btn btn-primary save" type="button">Save</button>'.*/'<div class="summernoteArea">'.$element['#value'].'</div>';
+  $output .= '<textarea'.drupal_attributes($element['#attributes']).'>'.check_plain($element['#value']).'</textarea>';
+  $output .= '</div>';
+
+  // importazione librerie
+  $path = drupal_get_path('module', 'summernote');
+  // javascript
+  drupal_add_js('//code.jquery.com/jquery-1.9.1.min.js', array('weight'=>1));
+  drupal_add_js('//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js', array('weight'=>2));
+  drupal_add_js($path.'/lib/summernote-start.js', array('weight'=>3));
+  drupal_add_js($path.'/lib/summernote.js', array('weight'=>4));
+  // css
+  // drupal_add_css('//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.no-icons.min.css', 'external');
+  drupal_add_css($path.'/lib/summernote.bootstrap.css');
+  drupal_add_css('//netdna.bootstrapcdn.com/font-awesome/3.1.1/css/font-awesome.min.css', 'external');
+  drupal_add_css($path.'/lib/summernote.css');
+
+
+  return $output;
+}
+?>
